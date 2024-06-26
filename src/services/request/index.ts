@@ -8,9 +8,9 @@ interface HYRequestConfig extends AxiosRequestConfig{
 }
 
 interface HYInterceptors {
-    requestSuccessFn?:(config:AxiosRequestConfig) => AxiosRequestConfig
+    requestSuccessFn?:(config:AxiosRequestConfig) =>  AxiosRequestConfig
     requestFailFn?:(err:any) => any
-    responseSuccessFn?:(res:AxiosResponse)=>AxiosResponse
+    responseSuccessFn?:(res:AxiosResponse) => AxiosResponse
     responseFailFn?:(err:any)=>any
 }
 
@@ -39,6 +39,7 @@ class HYRequest{
             }
         )
 
+        // 实例拦截器
         this.instance.interceptors.request.use(
             config.interceptors?.requestSuccessFn,
             config.interceptors?.requestFailFn
@@ -49,10 +50,23 @@ class HYRequest{
         )
     }
 
-
-
     request(config:HYRequestConfig){
-        return this.instance.request(config)
+        // 针对单次请求的拦截
+        // 在发送请求之前，判断有没有传递interceptors
+        if(config.interceptors?.requestSuccessFn){
+            config = config.interceptors.requestSuccessFn(config)
+        }
+        return new Promise((resolve, reject) => {
+            this.instance.request(config).then(res=>{
+                // 在响应成功，返回数据前，判断有没有多传递interceptors
+                if(config.interceptors?.responseSuccessFn){
+                    res = config.interceptors.responseSuccessFn(res)
+                }
+                resolve(res)
+            }).catch(err=>{
+                reject(err)
+            })
+        })
     }
 
     get(config:HYRequestConfig){
